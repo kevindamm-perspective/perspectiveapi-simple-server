@@ -113,7 +113,20 @@ export class Server {
       // this.app.use(helmet);
       // this.app.use(helmet.hsts({ force: true }));
     // }
-
+      
+    // Enforce TLS by redirecting http: traffic to https: (involves another round-trip).
+    // Since we're behind nginx we will likely see secure === false but it will populate
+    // the X-Forwarded-Proto header.  We also want to restrict this behavior to
+    // production deployments.
+    this.app.use(function (req, res, next) {
+      if (!req.secure
+          && req.get('x-forwarded-proto') !== 'https'
+          && this.config.isProduction) {
+        return res.redirect('https://perspectiveapi.com' + req.url);
+      }
+      next();
+    });
+    
     // this.app.use(morganLogger('combined'));
 
     this.app.use(express.static(this.staticPath));
